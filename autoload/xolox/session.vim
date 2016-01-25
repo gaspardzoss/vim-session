@@ -246,8 +246,8 @@ function! s:state_filter(line) " {{{3
   elseif a:line =~ '^file .\{-}\[BufExplorer\]$'
     " Same trick (about the E95) for BufExplorer.
     return '" ' . a:line
-  " elseif a:line =~ '^file -MiniBufExplorer-$'
-  "   return '" ' . a:line
+  elseif a:line =~ '^file -MiniBufExplorer-$'
+    return '" ' . a:line
   elseif a:line =~ '^file .\{-}__Tagbar__$'
     return '" ' . a:line
   elseif a:line =~ '^file .\{-}__Tag_List__$'
@@ -303,62 +303,65 @@ function! s:check_special_tabpage(session)
 endfunction
 
 function! s:check_special_window(session)
-  " If we detected a special window and the argument to the command is not a
+  " If we detected a special window and the l:argument to the l:command is not a
   " pathname, this variable should be set to false to disable normalization.
   let do_normalize_path = 1
   let bufname = expand('%:t')
+  let l:command = ''
+  let l:argument = ''
   if exists('b:NERDTreeRoot')
     if !has_key(s:nerdtrees, bufnr('%'))
-      let command = 'NERDTree'
-      let argument = b:NERDTreeRoot.path.str()
+      let l:command = 'NERDTree'
+      let l:argument = b:NERDTreeRoot.path.str()
       let s:nerdtrees[bufnr('%')] = 1
     else
-      let command = 'NERDTreeMirror'
-      let argument = ''
+      let l:command = 'NERDTreeMirror'
+      let l:argument = ''
     endif
-  " elseif bufname == '-MiniBufExplorer-'
-  "   let command = 'MBEOpen'
-  "   let argument = ''
+  elseif bufname == '-MiniBufExplorer-'
+    let l:command = 'MBEOpen'
+    let l:argument = ''
   elseif bufname == '[BufExplorer]'
-    let command = 'BufExplorer'
-    let argument = ''
+    let l:command = 'BufExplorer'
+    let l:argument = ''
   elseif bufname == '__Tagbar__'
-    let command = 'TagbarOpen'
-    let argument = ''
+    let l:command = 'TagbarOpen'
+    let l:argument = ''
   elseif bufname == '__Tag_List__'
-    let command = 'Tlist'
-    let argument = ''
+    let l:command = 'Tlist'
+    let l:argument = ''
   elseif exists('g:proj_running') && g:proj_running == bufnr('%')
-    let command = 'Project'
-    let argument = expand('%:p')
+    let l:command = 'Project'
+    let l:argument = expand('%:p')
   elseif exists('b:ConqueTerm_Idx')
-    let command = 'ConqueTerm'
-    let argument = g:ConqueTerm_Terminals[b:ConqueTerm_Idx]['program_name']
+    let l:command = 'ConqueTerm'
+    let l:argument = g:ConqueTerm_Terminals[b:ConqueTerm_Idx]['program_name']
     let do_normalize_path = 0
   elseif &filetype == 'netrw'
-    let command = 'edit'
-    let argument = bufname('%')
+    let l:command = 'edit'
+    let l:argument = bufname('%')
   elseif &buftype == 'quickfix'
-    let command = 'cwindow'
-    let argument = ''
+    let l:command = 'cwindow'
+    let l:argument = ''
   endif
-  if exists('command')
+  if exists('l:command')
     call s:jump_to_window(a:session, tabpagenr(), winnr())
     call add(a:session, 'let s:bufnr_save = bufnr("%")')
     call add(a:session, 'let s:cwd_save = getcwd()')
-    if argument == ''
-      call add(a:session, command)
+    call s:cleanup_after_plugin(a:session, 's:bufnr_save')
+    if l:argument == ''
+      call add(a:session, l:command)
     else
       if do_normalize_path
-        let argument = fnamemodify(argument, ':~')
+        let l:argument = fnamemodify(l:argument, ':~')
         if xolox#session#options_include('slash')
-          let argument = substitute(argument, '\', '/', 'g')
+          let l:argument = substitute(l:argument, '\', '/', 'g')
         endif
       endif
-      call add(a:session, command . ' ' . fnameescape(argument))
+      call add(a:session, l:command . ' ' . fnameescape(l:argument))
     endif
-    call s:cleanup_after_plugin(a:session, 's:bufnr_save')
     call add(a:session, 'execute "cd" fnameescape(s:cwd_save)')
+    call add(a:session, '')
     return 1
   endif
 endfunction
